@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pantry Pilot — What Can I Cook?</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #f7f4ee; color: #29251f; }
+        #app { width: min(980px, 94vw); margin: 40px auto; }
+        header { margin-bottom: 22px; }
+        h1 { font-size: 2rem; margin-bottom: 6px; }
+        header p { color: #70695f; line-height: 1.5; }
+        .examples { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+        .example { border: 1px solid #d8d0c3; background: #fffdf9; border-radius: 999px; padding: 8px 12px; cursor: pointer; font-size: .85rem; }
+        #container { background: #fffdf9; border: 1px solid #ded7cc; border-radius: 18px; overflow: hidden; box-shadow: 0 8px 30px rgba(60,45,25,.07); }
+        #messages { overflow-y: auto; padding: 24px; min-height: 480px; max-height: 66vh; display: flex; flex-direction: column; gap: 14px; }
+        .msg { max-width: 82%; line-height: 1.55; white-space: pre-wrap; }
+        .msg.user { align-self: flex-end; background: #29251f; color: white; padding: 11px 14px; border-radius: 15px 15px 4px 15px; }
+        .msg.assistant { align-self: flex-start; padding: 5px 4px; }
+        .role { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: #8a8175; margin-bottom: 4px; }
+        .tool { font-family: ui-monospace, SFMono-Regular, monospace; font-size: .72rem; color: #665d52; background: #f1ece3; border-left: 3px solid #a67c52; padding: 8px 10px; border-radius: 4px; white-space: pre-wrap; word-break: break-word; }
+        .tool .label { font-weight: 700; color: #795b3d; }
+        #input-area { display: flex; gap: 10px; padding: 16px; border-top: 1px solid #e5dfd6; }
+        #user-input { flex: 1; border: 1px solid #d8d0c3; border-radius: 10px; padding: 12px; font-size: 1rem; outline: none; background: white; }
+        #user-input:focus { border-color: #8d765d; }
+        button#send-btn { border: none; border-radius: 10px; padding: 0 20px; background: #29251f; color: white; cursor: pointer; }
+        button:disabled { opacity: .4; cursor: default; }
+        #welcome { color: #6f685f; }
+    </style>
+</head>
+<body>
+<div id="app">
+    <header>
+        <h1>🍳 Pantry Pilot</h1>
+        <p>Tell me what you have, what you avoid, and what you’re craving. I’ll search real recipes, check your ingredient match, and suggest practical adaptations.</p>
+        <div class="examples">
+            <button class="example">I have pasta, spinach, milk, garlic and Greek yogurt. Make it creamy and vegetarian.</button>
+            <button class="example">I have rice, chickpeas, tomatoes and onions. I’m vegan and want a quick dinner.</button>
+            <button class="example">I have potatoes, eggs and cheese. I’m allergic to peanuts. What can I make?</button>
+        </div>
+    </header>
+    <div id="container">
+        <div id="messages"><div id="welcome">Start with your ingredients — quantities are optional.</div></div>
+        <div id="input-area">
+            <input id="user-input" type="text" placeholder="e.g. I have tomatoes, pasta and spinach..." autocomplete="off" />
+            <button id="send-btn">Send</button>
+        </div>
+    </div>
+</div>
+<script>
+const messages = document.getElementById("messages");
+const userInput = document.getElementById("user-input");
+const sendBtn = document.getElementById("send-btn");
+let sessionId = null;
+
+function addMessage(role, text, isLoading = false) {
+    const div = document.createElement("div");
+    div.className = "msg " + (role === "you" ? "user" : "assistant") + (isLoading ? " loading" : "");
+    const roleDiv = document.createElement("div");
+    roleDiv.className = "role";
+    roleDiv.textContent = role;
+    const content = document.createElement("div");
+    content.className = "content";
+    content.textContent = text;
+    div.appendChild(roleDiv);
+    div.appendChild(content);
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+    return div;
+}
+
+async function send() {
+    const text = userInput.value.trim();
+    if (!text) return;
+    userInput.value = "";
+    sendBtn.disabled = true;
+    addMessage("you", text);
+    const loading = addMessage("assistant", "Thinking...", true);
+    try {
+        const res = await fetch("/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message: text, session_id: sessionId })
+        });
+        const data = await res.json();
+        sessionId = data.session_id;
+        for (const call of data.tool_calls || []) {
+            const div = document.createElement("div");
+            div.className = "tool";
+            const label = document.createElement("span");
+            label.className = "label";
+            label.textContent = "agent tool → ";
+            div.appendChild(label);
+            div.appendChild(document.createTextNode(call.name + "(" + JSON.stringify(call.args) + ")\n→ " + call.result));
+            messages.insertBefore(div, loading);
+        }
+        loading.querySelector(".content").textContent = data.response;
+        loading.classList.remove("loading");
+    } catch (e) {
+        loading.querySelector(".content").textContent = "Something went wrong: " + e.message;
+        loading.classList.remove("loading");
+    }
+    sendBtn.disabled = false;
+    userInput.focus();
+}
+
+document.querySelectorAll(".example").forEach(button => {
+    button.addEventListener("click", () => { userInput.value = button.textContent; userInput.focus(); });
+});
+sendBtn.addEventListener("click", send);
+userInput.addEventListener("keydown", e => { if (e.key === "Enter") send(); });
+userInput.focus();
+</script>
+</body>
+</html>
