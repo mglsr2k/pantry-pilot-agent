@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pantry Pilot — What Can I Cook?</title>
+    <title>Pantry  — What Can I Cook?</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: system-ui, -apple-system, sans-serif; min-height: 100vh; background: #f7f4ee; color: #29251f; }
@@ -27,16 +27,42 @@
         button#send-btn { border: none; border-radius: 10px; padding: 0 20px; background: #29251f; color: white; cursor: pointer; }
         button:disabled { opacity: .4; cursor: default; }
         #welcome { color: #6f685f; }
+        .header-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        #new-chat-btn {
+            border: 1px solid #d8d0c3;
+            border-radius: 10px;
+            padding: 9px 13px;
+            background: #fffdf9;
+            color: #29251f;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        #new-chat-btn:hover {
+            background: #f1ece3;
+        }
     </style>
 </head>
 <body>
 <div id="app">
     <header>
-        <h1>🍳 Pantry Pilot</h1>
-        <p>Tell me what you have, what you avoid, and what you’re craving. I’ll search real recipes, check your ingredient match, and suggest practical adaptations.</p>
+        <div class="header-row">
+            <div>
+                <h1>🍳 Pantry Help</h1>
+                <p>Tell me what you have, what you avoid, and what you’re craving. I’ll search real recipes, check your ingredient match, and suggest practical adaptations.</p>
+            </div>
+            <button id="new-chat-btn">New conversation</button>
+        </div>
+
         <div class="examples">
-            <button class="example">I have pasta, spinach, milk, garlic and Greek yogurt. Make it creamy and vegetarian.</button>
-            <button class="example">I have rice, chickpeas, tomatoes and onions. I’m vegan and want a quick dinner.</button>
+            <button class="example">I have pasta, spinach, milk, garlic and Greek yogurt. Make me something creamy.</button>
+            <button class="example">I have rice, chickpeas, tomatoes and onions. I’m vegan and want to use as many as possible.</button>
             <button class="example">I have potatoes, eggs and cheese. I’m allergic to peanuts. What can I make?</button>
         </div>
     </header>
@@ -53,6 +79,24 @@ const messages = document.getElementById("messages");
 const userInput = document.getElementById("user-input");
 const sendBtn = document.getElementById("send-btn");
 let sessionId = null;
+const newChatBtn = document.getElementById("new-chat-btn");
+
+newChatBtn.addEventListener("click", async () => {
+    if (sessionId) {
+        try {
+            await fetch("/clear?session_id=" + encodeURIComponent(sessionId), {
+                method: "POST"
+            });
+        } catch (e) {
+            // The local session can still be reset if the clear request fails.
+        }
+    }
+
+    sessionId = null;
+    messages.innerHTML = '<div id="welcome">Start with your ingredients — quantities are optional.</div>';
+    userInput.value = "";
+    userInput.focus();
+});
 
 function addMessage(role, text, isLoading = false) {
     const div = document.createElement("div");

@@ -5,7 +5,8 @@ Pantry Pilot is a domain-specific web chat agent that helps users decide what th
 ## Tools
 
 1. **`search_recipes`** — calls the Spoonacular recipe API using the user's ingredients. It returns recipe candidates with used/missing ingredients and a Spoonacular backlink.
-2. **`match_ingredients`** — a local Python tool that compares pantry ingredients with a candidate recipe, calculates an approximate match percentage, identifies missing ingredients, and suggests possible substitutions.
+2. **`get_recipe_details`** — calls Spoonacular for one selected recipe and retrieves its complete ingredient list, servings, preparation time, and source URL.
+3. **`match_ingredients`** — a local Python tool that compares the selected recipe's ingredients with the user's pantry, calculates an approximate match percentage, identifies missing ingredients, and suggests possible substitutions.
 
 The agent uses Gemini through Vertex AI to decide when to call tools and how to combine their results. Conversation history is stored by session so follow-up questions can use earlier context.
 
